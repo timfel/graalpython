@@ -45,10 +45,14 @@ if command -v manylinux-interpreters 2>&1 >/dev/null; then
         openssl-devel \
         thrift-devel \
         jemalloc-devel \
-        rapidjson-devel \
         xsimd-devel \
         libzstd-devel \
         re2-devel \
+        mimalloc \
+        lz4-devel \
         bzip2-devel \
-        llvm clang clang-libs
+        llvm llvm-libs llvm-devel \
+        llvm-cmake-utils \
+        lld lld-devel \
+        clang clang-libs clang-devel
 fi
