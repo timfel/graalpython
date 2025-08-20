@@ -10,12 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-          cache: 'maven'
-
       - name: Build maven artifacts
         run: |
           sudo apt-get update
@@ -29,18 +23,15 @@ jobs:
           mx --dy /vm build
           mx --dy /vm maven-deploy --validate none --all-suites --suppress-javadoc --all-distribution-types --licenses UPL,MIT,GPLv2-CPE,BSD-new,PSF-License,ICU python-local-snapshots file://$(pwd)/m2repo
 
-      - uses: docker/setup-qemu-action@v3
-
-      - name: Test on ubi8 (RHEL 8 ppc64le) via QEMU
-        uses: addnab/docker-run-action@v3
+      - uses: uraimo/run-on-arch-action@v3
         with:
-          image: ppc64le/ubi8:latest
-          options: >-
-            --platform=linux/ppc64le
-            -v ${{ github.workspace }}:/workspace
-          shell: bash
+          arch: ppc64le
+          distro: ubuntu_latest
+          dockerRunArgs: |
+            --volume "${GITHUB_WORKSPACE}:/workspace"
           run: |
-            microdnf install -y python3 git wget tar gzip cmake gcc gcc-c++ maven
+            sudo apt-get update
+            sudo apt-get install -y python3 git wget tar gzip cmake build-essential maven
 
             # Install IBM Semeru OpenJ9 Java 21 (ppc64le)
             wget https://github.com/ibmruntimes/semeru21-binaries/releases/download/jdk-21.0.8%2B9_openj9-0.53.0/ibm-semeru-open-jdk_ppc64le_linux_21.0.8_9_openj9-0.53.0.tar.gz
