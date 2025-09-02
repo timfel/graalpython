@@ -294,7 +294,8 @@ def libpythonvm_build_args():
                     f"graalpy/{commit}",
                     profile,
                 ],
-                nonZeroIsFatal=False
+                nonZeroIsFatal=False,
+                env={"UPLOADER_PYTHON": sys.executable, **os.environ},
             )
         else:
             # Locally, we try to get a reasonable profile
@@ -409,16 +410,19 @@ def graalpy_native_pgo_build_and_test(_):
     mx.log(mx.colorize(f"[PGO] Gzipped profile at: {iprof_gz_path}", color="yellow"))
 
     if shutil.which("artifact_uploader"):
-        run([
-            "artifact_uploader",
-            iprof_gz_path,
-            str(SUITE.vc.tip(SUITE.dir)).strip(),
-            "graalpy",
-            "--lifecycle",
-            "cache",
-            "--artifact-repo-key",
-            os.environ.get("ARTIFACT_REPO_KEY_LOCATION"),
-        ])
+        run(
+            [
+                "artifact_uploader",
+                iprof_gz_path,
+                str(SUITE.vc.tip(SUITE.dir)).strip(),
+                "graalpy",
+                "--lifecycle",
+                "cache",
+                "--artifact-repo-key",
+                os.environ.get("ARTIFACT_REPO_KEY_LOCATION"),
+            ],
+            env={"UPLOADER_PYTHON": sys.executable, **os.environ},
+        )
 
     return iprof_gz_path
 
