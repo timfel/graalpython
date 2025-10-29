@@ -1,0 +1,62 @@
+name: Generate CI Matrix from ci.jsonnet
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download sjsonnet
+        run: |
+          curl -L -o sjsonnet https://github.com/databricks/sjsonnet/releases/download/0.5.7/sjsonnet-0.5.7-linux-x86_64
+          chmod +x sjsonnet
+      - name: Extract job matrix
+        id: set-matrix
+        run: |
+          python3 .github/scripts/extract_matrix.py ./sjsonnet ./ci.jsonnet > matrix.json
+          echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
+
+  build:
+    needs: generate-matrix
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python_version }}
+      - name: Get mx
+        run: |
+          git clone https://github.com/graalvm/mx
+          git -C mx checkout ${{ matrix.mx_version }}
+      - name: Install system packages on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          for pkg in ${{ matrix.system_packages }}; do
+              sudo apt-get install "$pkg" || true
+          done
+      - name: Install system packages on macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          for pkg in ${{ matrix.system_packages }}; do
+              brew install "$pkg" || true
+          done
+      - name: Install system packages on Windows
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          foreach ($pkg in ${{ matrix.system_packages }}) {
+            choco install "$pkg" -y -ErrorAction SilentlyContinue
+          }
+      - name: Setup
+        run: ${{ matrix.setup_steps }}
+      - name: Run
+        run: ${{ matrix.run_steps }}
