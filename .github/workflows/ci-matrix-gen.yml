@@ -1,0 +1,89 @@
+name: Generate CI Matrix from ci.jsonnet
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download sjsonnet
+        run: |
+          curl -L -o sjsonnet https://github.com/databricks/sjsonnet/releases/download/0.5.7/sjsonnet-0.5.7-linux-x86_64
+          chmod +x sjsonnet
+      - name: Extract job matrix
+        id: set-matrix
+        run: |
+          python3 .github/scripts/extract_matrix.py ./sjsonnet ./ci.jsonnet > matrix.json
+          cat matrix.json
+          echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
+
+  build:
+    needs: generate-matrix
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python_version }}
+      - name: Get mx
+        run: |
+          git clone https://github.com/graalvm/mx
+          # git -C mx checkout ${{ matrix.mx_version }}
+      - name: Put mx and utils on PATH
+        if: runner.os != 'Windows'
+        run: |
+          echo "$(pwd)/mx/" >> "$GITHUB_PATH"
+          cp .github/scripts/set-export mx/
+          cp .github/scripts/unpack-artifact mx/
+      - name: Put mx and utils on PATH
+        if: runner.os == 'Windows'
+        run: |
+          "$PWD/mx" | Out-File -FilePath "$env:GITHUB_PATH" -Append
+          cp .github/scripts/set-export.cmd mx/
+          cp .github/scripts/unpack-artifact.cmd mx/
+      - name: Install system packages on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get -qq update
+          for pkg in ${{ matrix.system_packages }}; do
+              sudo apt-get -qq install "$pkg" || true
+          done
+      - name: Install system packages on macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          for pkg in ${{ matrix.system_packages }}; do
+              brew install "$pkg" || true
+          done
+      - name: Install system packages on Windows
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          foreach ($pkg in ${{ matrix.system_packages }}) {
+            choco install "$pkg" -y -ErrorAction SilentlyContinue
+          }
+      - name: Get labsjdk on Unix
+        if: runner.os != 'Windows'
+        run: |
+          mx -p ../graal/vm fetch-jdk -A --jdk-id labsjdk-ce-latest
+          echo "JAVA_HOME=$HOME/.mx/jdks/labsjdk-ce-latest" >> "$GITHUB_ENV"
+          echo "JVMCI_VERSION_CHECK=ignore" >> "$GITHUB_ENV"
+      - name: Get labsjdk on Windows
+        if: runner.os == 'Windows'
+        run: |
+          mx -p ../graal/vm fetch-jdk -A --jdk-id labsjdk-ce-latest
+          "JAVA_HOME=$HOME/.ms/jdks/labsjdk-ce-latest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "JVMCI_VERSION_CHECK=ignore" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Setup
+        run: ${{ matrix.setup_steps }}
+      - name: Run
+        run: ${{ matrix.run_steps }}
