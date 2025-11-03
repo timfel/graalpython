@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  generate-matrix:
+  generate-tier1:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    env:
+      TARGET: tier1
+    steps: &generate_matrix
+      - uses: actions/checkout@v4
       - name: Download sjsonnet
         run: |
           curl -L -o sjsonnet https://github.com/databricks/sjsonnet/releases/download/0.5.7/sjsonnet-0.5.7-linux-x86_64
@@ -18,18 +19,34 @@ jobs:
       - name: Extract job matrix
         id: set-matrix
         run: |
-          python3 .github/scripts/extract_matrix.py ./sjsonnet ./ci.jsonnet > matrix.json
+          python3 .github/scripts/extract_matrix.py ./sjsonnet ./ci.jsonnet ${TARGET} > matrix.json
           cat matrix.json
           echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
 
-  build:
-    needs: generate-matrix
+  generate-tier2:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    env:
+      TARGET: tier2
+    steps: *generate_matrix
+
+  generate-tier3:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    env:
+      TARGET: tier3
+    steps: *generate_matrix
+
+  tier1:
+    needs: generate-tier1
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
-    steps:
+        include: ${{ fromJson(needs.generate-tier1.outputs.matrix) }}
+    steps: &buildsteps
       - uses: actions/checkout@main
       - uses: actions/setup-python@v6
         with:
@@ -50,6 +67,7 @@ jobs:
           "$PWD/mx" | Out-File -FilePath "$env:GITHUB_PATH" -Append
           cp .github/scripts/set-export.cmd mx/
           cp .github/scripts/unpack-artifact.cmd mx/
+
       - name: Install system packages on Linux
         if: runner.os == 'Linux'
         run: |
@@ -71,6 +89,7 @@ jobs:
           foreach ($pkg in ${{ matrix.system_packages }}) {
             choco install "$pkg" -y -ErrorAction SilentlyContinue
           }
+
       - name: Get labsjdk on Unix
         if: runner.os != 'Windows'
         run: |
@@ -83,7 +102,41 @@ jobs:
           mx -p ../graal/vm fetch-jdk -A --jdk-id labsjdk-ce-latest
           "JAVA_HOME=$HOME/.ms/jdks/labsjdk-ce-latest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "JVMCI_VERSION_CHECK=ignore" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v5
+        if: ${{ matrix.require_artifact }}
+        with:
+          pattern: ${{ matrix.require_artifact[0] }}
+          path: ${{ matrix.require_artifact[1] }}
+          merge-multiple: true
+
       - name: Setup
         run: ${{ matrix.setup_steps }}
       - name: Run
         run: ${{ matrix.run_steps }}
+
+      - name: Upload artifacts
+        if: ${{ matrix.provide_artifact }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.provide_artifact[0] }}
+          path: ${{ fromJson(matrix.provide_artifact[1]) }}
+
+  tier2:
+    needs: [generate-tier2, tier1]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-tier2.outputs.matrix) }}
+    steps: *buildsteps
+
+  tier3:
+    needs: [generate-tier3, tier2]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-tier3.outputs.matrix) }}
+    steps: *buildsteps
