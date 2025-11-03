@@ -133,7 +133,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.provide_artifact[0] }}
-          path: ${{ matrix.provide_artifact[1] }}
+          path: ${{ join(matrix.provide_artifact[1], '
+          ') }}
           retention-days: 1
 
       - name: Upload logs
@@ -141,8 +142,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name + "_logs" }}
-          path: ${{ matrix.logs }}
-          retention-days: 1
+          path: ${{ join(matrix.logs, '
+          ') }}
+          retention-days: 15
 
   tier2:
     if: ${{ always() }}

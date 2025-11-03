@@ -213,6 +213,8 @@ def get_tagged_jobs(buildspec, target):
     for job in sorted([Job(build) for build in buildspec.get("builds", [])]):
         if not any(t for t in job.targets if t in [target]):
             continue
+        if not "python-svm-build-gate-linux-amd64-jdk-latest" in job.name:
+            continue
         if not "gate" in job.name:
             continue
         if job.runs_on not in ["ubuntu-latest"]:
