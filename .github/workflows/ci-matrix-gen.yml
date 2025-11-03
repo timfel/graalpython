@@ -134,6 +134,15 @@ jobs:
         with:
           name: ${{ matrix.provide_artifact[0] }}
           path: ${{ matrix.provide_artifact[1] }}
+          retention-days: 1
+
+      - name: Upload logs
+        if: ${{ matrix.logs }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name + "_logs" }}
+          path: ${{ matrix.logs }}
+          retention-days: 1
 
   tier2:
     if: ${{ always() }}

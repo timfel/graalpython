@@ -2,7 +2,6 @@
 import fnmatch
 import json
 import os
-import re
 import shlex
 import subprocess
 import sys
@@ -162,6 +161,10 @@ class Job:
         cmds = [self.flatten_command(step) for step in self.job.get("run", [])]
         return "; ".join(shlex.join(s) for s in cmds)
 
+    @cached_property
+    def logs(self) -> list[str] | None:
+        return self.job.get("logs", None)
+
     def to_dict(self):
         """
         This is the interchange with the YAML file defining the Github jobs, so here
@@ -178,6 +181,7 @@ class Job:
             "system_packages": " ".join(self.system_packages),
             "provide_artifact": [self.upload_artifact.name, self.upload_artifact.pattern] if self.upload_artifact else None,
             "require_artifact": [self.download_artifact.name, self.download_artifact.pattern] if self.download_artifact else None,
+            "logs": self.logs,
             "env": self.env,
         }
 
