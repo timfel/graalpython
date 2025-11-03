@@ -42,6 +42,7 @@ jobs:
   tier1:
     needs: generate-tier1
     runs-on: ${{ matrix.os }}
+    env: ${{ matrix.env }}
     strategy:
       fail-fast: false
       matrix:

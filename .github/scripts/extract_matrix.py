@@ -12,6 +12,11 @@ from functools import cached_property, total_ordering
 from typing import Any
 
 
+DEFAULT_ENV = {
+    "CI": "true",
+}
+
+
 @dataclass
 class Artifact:
     name: str
@@ -48,7 +53,7 @@ class Job:
 
     @cached_property
     def env(self) -> dict[str, str]:
-        return self.job.get("environment", {})
+        return self.job.get("environment", {}) | DEFAULT_ENV
 
     @cached_property
     def mx_version(self) -> str:
