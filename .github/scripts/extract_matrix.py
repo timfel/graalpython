@@ -130,7 +130,7 @@ class Job:
             patterns = artifacts[0].get("patterns", ["*"])
             return Artifact(
                 artifacts[0]["name"],
-                "\n".join([os.path.join(dir, p) for p in patterns])
+                "\n".join([os.path.normpath(os.path.join(dir, p)) for p in patterns])
             )
         return None
 
@@ -138,7 +138,7 @@ class Job:
     def download_artifact(self) -> Artifact | None:
         if artifacts := self.job.get("requireArtifacts", []):
             pattern = self.common_glob([a["name"] for a in artifacts])
-            return Artifact(pattern, artifacts[0].get("dir", "."))
+            return Artifact(pattern, os.path.normpath(artifacts[0].get("dir", ".")))
         return None
 
     @staticmethod
@@ -181,8 +181,8 @@ class Job:
             "run_steps": self.run,
             "python_packages": " ".join(self.python_packages),
             "system_packages": " ".join(self.system_packages),
-            "provide_artifact": [self.upload_artifact.name, self.upload_artifact.pattern] if self.upload_artifact else None,
-            "require_artifact": [self.download_artifact.name, self.download_artifact.pattern] if self.download_artifact else None,
+            "provide_artifact": [self.upload_artifact.name, self.upload_artifact.pattern.replace("../", "${{ env.PARENT_DIRECTORY }}/")] if self.upload_artifact else None,
+            "require_artifact": [self.download_artifact.name, self.download_artifact.pattern.replace("../", "${{ env.PARENT_DIRECTORY }}/")] if self.download_artifact else None,
             "logs": self.logs,
             "env": self.env,
         }

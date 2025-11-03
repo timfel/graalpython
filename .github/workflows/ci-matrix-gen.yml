@@ -49,6 +49,14 @@ jobs:
         include: ${{ fromJson(needs.generate-tier1.outputs.matrix) }}
     steps: &buildsteps
       - uses: actions/checkout@main
+      - name: Set Unix parent directory absolute path (see actions/upload-artifact#176)
+        if: runner.os != 'Windows'
+        run: |
+          echo "PARENT_DIRECTORY=$(realpath ..)" >> $GITHUB_ENV
+      - name: Set Windows parent directory absolute path (see actions/upload-artifact#176)
+        if: runner.os == 'Windows'
+        run: |
+          "PARENT_DIRECTORY=$(Resolve-Path ..)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python_version }}
