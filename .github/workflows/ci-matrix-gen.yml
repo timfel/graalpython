@@ -124,17 +124,19 @@ jobs:
           merge-multiple: true
 
       - name: Setup
-        run: ${{ matrix.setup_steps }}
+        run: |
+          ${{ matrix.setup_steps }}
       - name: Run
-        run: ${{ matrix.run_steps }}
+        run: |
+          ${{ matrix.run_steps }}
 
       - name: Upload artifacts
         if: ${{ matrix.provide_artifact }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.provide_artifact[0] }}
-          path: ${{ join(matrix.provide_artifact[1], '
-          ') }}
+          path: |
+            ${{ matrix.provide_artifact[1] }}
           retention-days: 1
 
       - name: Upload logs
@@ -142,8 +144,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name + "_logs" }}
-          path: ${{ join(matrix.logs, '
-          ') }}
+          path: |
+            ${{ matrix.logs }}
           retention-days: 15
 
   tier2:

@@ -19,10 +19,7 @@ DEFAULT_ENV = {
 @dataclass
 class Artifact:
     name: str
-    pattern: str | list[str]
-
-    def __bool__(self):
-        return bool(self.name or self.pattern)
+    pattern: str
 
 
 @total_ordering
@@ -131,7 +128,10 @@ class Job:
             assert len(artifacts) == 1
             dir = artifacts[0].get("dir", ".")
             patterns = artifacts[0].get("patterns", ["*"])
-            return Artifact(artifacts[0]["name"], [os.path.join(dir, p) for p in patterns])
+            return Artifact(
+                artifacts[0]["name"],
+                "\n".join([os.path.join(dir, p) for p in patterns])
+            )
         return None
 
     @cached_property
@@ -154,16 +154,18 @@ class Job:
     @cached_property
     def setup(self) -> str:
         cmds = [self.flatten_command(step) for step in self.job.get("setup", [])]
-        return "; ".join(shlex.join(s) for s in cmds)
+        return "\n".join(shlex.join(s) for s in cmds)
 
     @cached_property
     def run(self) -> str:
         cmds = [self.flatten_command(step) for step in self.job.get("run", [])]
-        return "; ".join(shlex.join(s) for s in cmds)
+        return "\n".join(shlex.join(s) for s in cmds)
 
     @cached_property
-    def logs(self) -> list[str] | None:
-        return self.job.get("logs", None)
+    def logs(self) -> str | None:
+        logs = self.job.get("logs")
+        if logs:
+            return "\n".join(logs)
 
     def to_dict(self):
         """
