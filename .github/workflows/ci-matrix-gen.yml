@@ -132,7 +132,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.provide_artifact[0] }}
-          path: ${{ fromJson(matrix.provide_artifact[1]) }}
+          path: ${{ matrix.provide_artifact[1] }}
 
   tier2:
     if: ${{ always() }}
