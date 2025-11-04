@@ -83,7 +83,7 @@ jobs:
           for pkg in ${{ matrix.python_packages }}; do
               pip install "$pkg" || true
           done
-      - name: Install system packages on Windows
+      - name: Install python packages on Windows
         if: ${{ runner.os == 'Windows' && matrix.python_packages }}
         run: |
           foreach ($pkg in ${{ matrix.python_packages }}) {
