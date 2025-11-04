@@ -2,6 +2,11 @@ name: Generate CI Matrix from ci.jsonnet
 
 on:
   workflow_dispatch:
+    inputs:
+      jobs_to_run:
+        type: string
+        description: Job selection (Python regex)
+        required: false
 
 jobs:
   generate-tier1:
@@ -10,6 +15,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     env:
       TARGET: tier1
+      JOBS: ${{ inputs.jobs_to_run }}
     steps: &generate_matrix
       - uses: actions/checkout@v4
       - name: Download sjsonnet
@@ -54,13 +60,15 @@ jobs:
       - name: Setup Unix paths like on buildbot CI (see actions/upload-artifact#176)
         if: runner.os != 'Windows'
         run: |
-          echo "PARENT_DIRECTORY=$(realpath ..)" >> $GITHUB_ENV
           ln -s $(pwd) ../main || true
+          cd ..
+          echo "PARENT_DIRECTORY=$(pwd)" >> $GITHUB_ENV
       - name: Set Windows parent directory absolute path (see actions/upload-artifact#176)
         if: runner.os == 'Windows'
         run: |
-          "PARENT_DIRECTORY=$(Resolve-Path ..)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           New-Item -ItemType SymbolicLink -Value $PWD -Path $(Resolve-Path .. | Join-Path -ChildPath "main") -ErrorAction SilentlyContinue
+          cd ..
+          "PARENT_DIRECTORY=$PWD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       # Set up Python and packages
       - uses: actions/setup-python@v6
@@ -130,6 +138,7 @@ jobs:
 
       - name: Setup
         run: |
+          env
           ${{ matrix.setup_steps }}
       - name: Run
         run: |

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import argparse
 import fnmatch
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -14,6 +16,14 @@ from typing import Any
 DEFAULT_ENV = {
     "CI": "true",
 }
+
+
+# If any of these terms are in the job json, they do not run in public
+# infrastructure
+JOB_EXCLUSION_TERMS = (
+    "enterprise",
+    "corporate-compliance",
+)
 
 
 @dataclass
@@ -208,33 +218,41 @@ class Job:
         return NotImplemented
 
 
-def get_tagged_jobs(buildspec, target):
+def get_tagged_jobs(buildspec, target, filter=None):
     jobs = []
     for job in sorted([Job(build) for build in buildspec.get("builds", [])]):
         if not any(t for t in job.targets if t in [target]):
             continue
-        if not "python-svm-build-gate-linux-amd64-jdk-latest" in job.name:
-            continue
-        if not "gate" in job.name:
+        if filter and not re.match(filter, job.name):
             continue
         if job.runs_on not in ["ubuntu-latest"]:
             continue
-        if "enterprise" in str(job):
+        if [x in str(job) for x in JOB_EXCLUSION_TERMS]:
             continue
         jobs.append(job.to_dict())
     return jobs
 
 
-def main(jsonnet_bin, ci_jsonnet, target, indent=False):
+def main(jsonnet_bin, ci_jsonnet, target, filter=None, indent=False):
     result = subprocess.check_output([jsonnet_bin, ci_jsonnet], text=True)
     buildspec = json.loads(result)
-    tagged_jobs = get_tagged_jobs(buildspec, target)
+    tagged_jobs = get_tagged_jobs(buildspec, target, filter=filter)
     matrix = tagged_jobs
     print(json.dumps(matrix, indent=2 if indent else None))
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print(f"Usage: {sys.argv[0]} <jsonnet_bin> <ci_jsonnet> <target>", file=sys.stderr)
-        sys.exit(1)
-    main(sys.argv[1], sys.argv[2], sys.argv[3], indent=sys.stdout.isatty())
+    parser = argparse.ArgumentParser(description="Generate GitHub CI matrix from Jsonnet buildspec.")
+    parser.add_argument("jsonnet_bin", help="Path to jsonnet binary")
+    parser.add_argument("ci_jsonnet", help="Path to ci.jsonnet spec")
+    parser.add_argument("target", help="Target name (e.g., tier1)")
+    parser.add_argument("filter", nargs="?", default=None, help="Regex filter for job names (optional)")
+    parser.add_argument('--indent', action='store_true', help='Indent output JSON')
+    args = parser.parse_args()
+    main(
+        jsonnet_bin=args.jsonnet_bin,
+        ci_jsonnet=args.ci_jsonnet,
+        target=args.target,
+        filter=args.filter,
+        indent=args.indent or sys.stdout.isatty(),
+    )
