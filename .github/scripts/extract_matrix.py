@@ -63,7 +63,7 @@ class Job:
         return self.job.get("environment", {}) | DEFAULT_ENV
 
     @cached_property
-    def mx_version(self) -> str:
+    def mx_version(self) -> str | None:
         for k, v in self.job.get("packages", {}).items():
             if k == "mx":
                 return v.strip("=<>~")
@@ -140,7 +140,7 @@ class Job:
             patterns = artifacts[0].get("patterns", ["*"])
             return Artifact(
                 artifacts[0]["name"],
-                "\n".join([os.path.normpath(os.path.join(dir, p)) for p in patterns])
+                " ".join([os.path.normpath(os.path.join(dir, p)) for p in patterns])
             )
         return None
 
@@ -189,8 +189,8 @@ class Job:
             "run_steps": self.run,
             "python_packages": " ".join(self.python_packages),
             "system_packages": " ".join(self.system_packages),
-            "provide_artifact": [self.upload_artifact.name, self.upload_artifact.pattern.replace("../", "${{ env.PARENT_DIRECTORY }}/")] if self.upload_artifact else None,
-            "require_artifact": [self.download_artifact.name, self.download_artifact.pattern.replace("../", "${{ env.PARENT_DIRECTORY }}/")] if self.download_artifact else None,
+            "provide_artifact": [self.upload_artifact.name, self.upload_artifact.pattern] if self.upload_artifact else None,
+            "require_artifact": [self.download_artifact.name, self.download_artifact.pattern] if self.download_artifact else None,
             "logs": self.logs.replace("../", "${{ env.PARENT_DIRECTORY }}/"),
             "env": self.env,
         }

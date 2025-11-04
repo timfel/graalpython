@@ -58,14 +58,13 @@ jobs:
     steps: &buildsteps
       - uses: actions/checkout@main
 
-      # Set up environment to match internal CI
-      - name: Setup Unix paths like on buildbot CI (see actions/upload-artifact#176)
+      - name: Setup Unix paths like on buildbot CI
         if: runner.os != 'Windows'
         run: |
           ln -s $(pwd) ../main || true
           cd ..
           echo "PARENT_DIRECTORY=$(pwd)" >> $GITHUB_ENV
-      - name: Set Windows parent directory absolute path (see actions/upload-artifact#176)
+      - name: Setup Windows paths like on buildbot CI
         if: runner.os == 'Windows'
         run: |
           New-Item -ItemType SymbolicLink -Value $PWD -Path $(Resolve-Path .. | Join-Path -ChildPath "main") -ErrorAction SilentlyContinue
@@ -139,24 +138,35 @@ jobs:
           pattern: ${{ matrix.require_artifact[0] }}
           path: ${{ matrix.require_artifact[1] }}
           merge-multiple: true
+      - name: Export artifact paths Linux
+        if: ${{ matrix.require_artifact }}
+        run: |
+          echo "ARTIFACT_PATHS=${{ matrix.require_artifact[1] }}/${{ matrix.require_artifact[0] }}.tar" >> "$GITHUB_ENV"
+          echo "ARTIFACT_PATH_PREFIX=${{ matrix.require_artifact[1] }}" >> "$GITHUB_ENV"
+      - name: Export artifact paths Windows
+        if: ${{ matrix.require_artifact }}
+        run: |
+          "ARTIFACT_PATHS=${{ matrix.require_artifact[1] }}/${{ matrix.require_artifact[0] }}.tar" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ARTIFACT_PATH_PREFIX=${{ matrix.require_artifact[1] }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Setup
         if: ${{ matrix.setup_steps }}
         run: |
-          env
           ${{ matrix.setup_steps }}
       - name: Run
         if: ${{ matrix.run_steps }}
         run: |
           ${{ matrix.run_steps }}
 
+      - name: Tar artifacts
+        if: ${{ matrix.provide_artifact }}
+        run: tar cf ${{ matrix.provide_artifact[0] }}.tar ${{ matrix.provide_artifact[1] }}
       - name: Upload artifacts
         if: ${{ matrix.provide_artifact }}
         uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.provide_artifact[0] }}
-          path: |
-            ${{ matrix.provide_artifact[1] }}
+          path: ${{ matrix.provide_artifact[0] }}.tar
           retention-days: 1
 
       - name: Upload logs

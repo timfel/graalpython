@@ -1,0 +1,11 @@
+#!/bin/bash
+
+to_extract="$ARTIFACT_PATHS"
+if [ -n "$1" ]; then
+   to_extract="${ARTIFACT_PATH_PREFIX}/${1}.tar"
+fi
+
+for i in $to_extract; do
+   tar -C "${ARTIFACT_PATH_PREFIX}" xf "$i"
+done
+
