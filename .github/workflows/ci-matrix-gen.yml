@@ -25,7 +25,7 @@ jobs:
       - name: Extract job matrix
         id: set-matrix
         run: |
-          python3 .github/scripts/extract_matrix.py ./sjsonnet ./ci.jsonnet ${TARGET} > matrix.json
+          python3 .github/scripts/extract_matrix.py ./sjsonnet ./ci.jsonnet ${TARGET} ${JOBS} > matrix.json
           cat matrix.json
           echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
 
@@ -35,6 +35,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     env:
       TARGET: tier2
+      JOBS: ${{ inputs.jobs_to_run }}
     steps: *generate_matrix
 
   generate-tier3:
@@ -43,6 +44,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     env:
       TARGET: tier3
+      JOBS: ${{ inputs.jobs_to_run }}
     steps: *generate_matrix
 
   tier1:
@@ -72,56 +74,58 @@ jobs:
 
       # Set up Python and packages
       - uses: actions/setup-python@v6
+        if: ${{ matrix.python_version }}
         with:
           python-version: ${{ matrix.python_version }}
       - name: Install python packages on Unix
-        if: runner.os != 'Windows'
+        if: ${{ runner.os != 'Windows' && matrix.python_packages }}
         run: |
           for pkg in ${{ matrix.python_packages }}; do
               pip install "$pkg" || true
           done
       - name: Install system packages on Windows
-        if: runner.os == 'Windows'
+        if: ${{ runner.os == 'Windows' && matrix.python_packages }}
         run: |
           foreach ($pkg in ${{ matrix.python_packages }}) {
             pip install "$pkg"
           }
 
       - name: Install system packages on Linux
-        if: runner.os == 'Linux'
+        if: ${{ runner.os == 'Linux' && matrix.system_packages }}
         run: |
           sudo apt-get -qq update
           for pkg in ${{ matrix.system_packages }}; do
               sudo apt-get -qq install "$pkg" || true
           done
       - name: Install system packages on macOS
-        if: runner.os == 'macOS'
+        if: ${{ runner.os == 'macOS' && matrix.system_packages }}
         run: |
           brew update
           for pkg in ${{ matrix.system_packages }}; do
               brew install "$pkg" || true
           done
       - name: Install system packages on Windows
-        if: runner.os == 'Windows'
+        if: ${{ runner.os == 'Windows' && matrix.system_packages }}
         run: |
           foreach ($pkg in ${{ matrix.system_packages }}) {
             choco install "$pkg" -y -ErrorAction SilentlyContinue
           }
 
       - name: Get mx, buildtools, and labsjdk
+        if: ${{ matrix.mx_version }}
         run: |
           git clone https://github.com/graalvm/mx
           mx/mx fetch-jdk -A --jdk-id labsjdk-ce-latest
           git -C mx checkout ${{ matrix.mx_version }}
       - name: Setup mx and JAVA_HOME on Unix
-        if: runner.os != 'Windows'
+        if: ${{ runner.os != 'Windows' && matrix.mx_version }}
         run: |
           echo "$(pwd)/mx/" >> "$GITHUB_PATH"
           echo "$(pwd)/.github/scripts/" >> "$GITHUB_PATH"
           echo "JAVA_HOME=$HOME/.mx/jdks/labsjdk-ce-latest" >> "$GITHUB_ENV"
           echo "JVMCI_VERSION_CHECK=ignore" >> "$GITHUB_ENV"
       - name: Setup mx and JAVA_HOME on Windows
-        if: runner.os == 'Windows'
+        if: ${{ runner.os == 'Windows' && matrix.mx_version }}
         run: |
           "$PWD/mx" | Out-File -FilePath "$env:GITHUB_PATH" -Append
           "$PWD/.github/scripts" | Out-File -FilePath "$env:GITHUB_PATH" -Append
@@ -137,10 +141,12 @@ jobs:
           merge-multiple: true
 
       - name: Setup
+        if: ${{ matrix.setup_steps }}
         run: |
           env
           ${{ matrix.setup_steps }}
       - name: Run
+        if: ${{ matrix.run_steps }}
         run: |
           ${{ matrix.run_steps }}
 
@@ -163,7 +169,7 @@ jobs:
           retention-days: 15
 
   tier2:
-    if: ${{ always() }}
+    if: ${{ success() || inputs.jobs_to_run }}
     needs: [generate-tier2, tier1]
     runs-on: ${{ matrix.os }}
     strategy:
@@ -173,7 +179,7 @@ jobs:
     steps: *buildsteps
 
   tier3:
-    if: ${{ always() }}
+    if: ${{ success() || inputs.jobs_to_run }}
     needs: [generate-tier3, tier2]
     runs-on: ${{ matrix.os }}
     strategy:

@@ -38,7 +38,7 @@ class Job:
         self.job = job
 
     @cached_property
-    def runs_on(self) -> str | None:
+    def runs_on(self) -> str:
         match self.job.get("capabilities", []):
             case ["darwin", *_, "aarch64"]:
                 return "macos-latest"
@@ -48,6 +48,7 @@ class Job:
                 return "ubuntu-latest"
             case ["windows", *_, "amd64"]:
                 return "windows-latest"
+        return "ubuntu-latest"
 
     @cached_property
     def name(self) -> str:
@@ -66,11 +67,10 @@ class Job:
         for k, v in self.job.get("packages", {}).items():
             if k == "mx":
                 return v.strip("=<>~")
-        return "master"
 
     @cached_property
-    def python_version(self) -> str:
-        python_version = "3.12"
+    def python_version(self) -> str | None:
+        python_version = None
         for k, v in self.job.get("packages", {}).items():
             if k == "python3":
                 python_version = v.strip("=<>~")
@@ -219,7 +219,7 @@ class Job:
 
 
 def get_tagged_jobs(buildspec, target, filter=None):
-    jobs = []
+    jobs = [Job({"name": target}).to_dict()]
     for job in sorted([Job(build) for build in buildspec.get("builds", [])]):
         if not any(t for t in job.targets if t in [target]):
             continue
@@ -227,7 +227,7 @@ def get_tagged_jobs(buildspec, target, filter=None):
             continue
         if job.runs_on not in ["ubuntu-latest"]:
             continue
-        if [x in str(job) for x in JOB_EXCLUSION_TERMS]:
+        if [x for x in JOB_EXCLUSION_TERMS if x in str(job)]:
             continue
         jobs.append(job.to_dict())
     return jobs
