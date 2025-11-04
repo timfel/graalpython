@@ -162,10 +162,8 @@ class Job:
         return "\n".join(shlex.join(s) for s in cmds)
 
     @cached_property
-    def logs(self) -> str | None:
-        logs = self.job.get("logs")
-        if logs:
-            return "\n".join(logs)
+    def logs(self) -> str:
+        return "\n".join(os.path.normpath(p) for p in self.job.get("logs", []))
 
     def to_dict(self):
         """
@@ -183,7 +181,7 @@ class Job:
             "system_packages": " ".join(self.system_packages),
             "provide_artifact": [self.upload_artifact.name, self.upload_artifact.pattern.replace("../", "${{ env.PARENT_DIRECTORY }}/")] if self.upload_artifact else None,
             "require_artifact": [self.download_artifact.name, self.download_artifact.pattern.replace("../", "${{ env.PARENT_DIRECTORY }}/")] if self.download_artifact else None,
-            "logs": self.logs,
+            "logs": self.logs.replace("../", "${{ env.PARENT_DIRECTORY }}/"),
             "env": self.env,
         }
 

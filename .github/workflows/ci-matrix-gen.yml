@@ -49,14 +49,20 @@ jobs:
         include: ${{ fromJson(needs.generate-tier1.outputs.matrix) }}
     steps: &buildsteps
       - uses: actions/checkout@main
-      - name: Set Unix parent directory absolute path (see actions/upload-artifact#176)
+
+      # Set up environment to match internal CI
+      - name: Setup Unix paths like on buildbot CI (see actions/upload-artifact#176)
         if: runner.os != 'Windows'
         run: |
           echo "PARENT_DIRECTORY=$(realpath ..)" >> $GITHUB_ENV
+          ln -s $(pwd) ../main || true
       - name: Set Windows parent directory absolute path (see actions/upload-artifact#176)
         if: runner.os == 'Windows'
         run: |
           "PARENT_DIRECTORY=$(Resolve-Path ..)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          New-Item -ItemType SymbolicLink -Value $PWD -Path $(Resolve-Path .. | Join-Path -ChildPath "main") -ErrorAction SilentlyContinue
+
+      # Set up Python and packages
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python_version }}
@@ -72,22 +78,6 @@ jobs:
           foreach ($pkg in ${{ matrix.python_packages }}) {
             pip install "$pkg"
           }
-      - name: Get mx
-        run: |
-          git clone https://github.com/graalvm/mx
-          # git -C mx checkout ${{ matrix.mx_version }}
-      - name: Put mx and utils on Unix PATH
-        if: runner.os != 'Windows'
-        run: |
-          echo "$(pwd)/mx/" >> "$GITHUB_PATH"
-          cp .github/scripts/set-export mx/
-          cp .github/scripts/unpack-artifact mx/
-      - name: Put mx and utils on Windows PATH
-        if: runner.os == 'Windows'
-        run: |
-          "$PWD/mx" | Out-File -FilePath "$env:GITHUB_PATH" -Append
-          cp .github/scripts/set-export.cmd mx/
-          cp .github/scripts/unpack-artifact.cmd mx/
 
       - name: Install system packages on Linux
         if: runner.os == 'Linux'
@@ -110,16 +100,23 @@ jobs:
             choco install "$pkg" -y -ErrorAction SilentlyContinue
           }
 
-      - name: Get labsjdk on Unix
+      - name: Get mx, buildtools, and labsjdk
+        run: |
+          git clone https://github.com/graalvm/mx
+          mx/mx fetch-jdk -A --jdk-id labsjdk-ce-latest
+          git -C mx checkout ${{ matrix.mx_version }}
+      - name: Setup mx and JAVA_HOME on Unix
         if: runner.os != 'Windows'
         run: |
-          mx -p ../graal/vm fetch-jdk -A --jdk-id labsjdk-ce-latest
+          echo "$(pwd)/mx/" >> "$GITHUB_PATH"
+          echo "$(pwd)/.github/scripts/" >> "$GITHUB_PATH"
           echo "JAVA_HOME=$HOME/.mx/jdks/labsjdk-ce-latest" >> "$GITHUB_ENV"
           echo "JVMCI_VERSION_CHECK=ignore" >> "$GITHUB_ENV"
-      - name: Get labsjdk on Windows
+      - name: Setup mx and JAVA_HOME on Windows
         if: runner.os == 'Windows'
         run: |
-          mx -p ../graal/vm fetch-jdk -A --jdk-id labsjdk-ce-latest
+          "$PWD/mx" | Out-File -FilePath "$env:GITHUB_PATH" -Append
+          "$PWD/.github/scripts" | Out-File -FilePath "$env:GITHUB_PATH" -Append
           "JAVA_HOME=$HOME/.ms/jdks/labsjdk-ce-latest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "JVMCI_VERSION_CHECK=ignore" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
