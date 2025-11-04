@@ -152,7 +152,7 @@ jobs:
 
       - name: Upload artifacts
         if: ${{ matrix.provide_artifact }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.provide_artifact[0] }}
           path: |
@@ -161,7 +161,7 @@ jobs:
 
       - name: Upload logs
         if: ${{ matrix.logs }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ format('{0}_logs', matrix.name) }}
           path: |
