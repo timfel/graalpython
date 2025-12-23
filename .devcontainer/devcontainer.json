@@ -1,0 +1,27 @@
+{
+    "name": "GraalPy",
+    "image": "mcr.microsoft.com/devcontainers/universal:linux",
+    "onCreateCommand": {
+        "system_packages": "sudo apt update && sudo apt install -y libffi-dev zlib1g-dev libbz2-dev",
+        "mx_labsjdk": "mkdir -p /opt && mkdir -p ~/.mx && git clone https://github.com/graalvm/mx /opt/mx && /opt/mx/mx -p /opt/mx -y fetch-jdk -A --to /opt --jdk-id labsjdk-ce-latest",
+        "python_packages": "pip install cmake pylint==2.4.4",
+        "permissions": "sudo chmod a+rwx /workspaces",
+    },
+    "postCreateCommand": {
+        "mx_env": "echo JAVA_HOME=/opt/labsjdk-ce-latest > ~/.mx/env",
+        "vscodeinit": "mx -y sforceimports && mx -y vscodeinit && mx -y build --target GRAALPY_JVM_STANDALONE"
+    },
+    "remoteEnv": {
+        "PATH": "/opt/mx:/opt/labsjdk-ce-latest/bin/:${containerEnv:PATH}"
+    },
+    "hostRequirements": {
+        "cpus": 2,
+        "memory": "16gb",
+        "storage": "64gb"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": ["vscjava.vscode-java-pack"]
+        }
+    }
+}
