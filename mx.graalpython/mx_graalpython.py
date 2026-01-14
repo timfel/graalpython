@@ -1535,6 +1535,14 @@ def graalpython_gate_runner(_, tasks):
             env["org.graalvm.maven.downloader.version"] = version
             env["org.graalvm.maven.downloader.repository"] = f"{pathlib.Path(mvn_repo_path).as_uri()}/"
 
+            # if the default m2 settings.xml file does not exist, create a dummy one
+            settings_dir = os.path.expanduser("~/.m2")
+            settings_xml = os.path.join(settings_dir, "settings.xml")
+            if not os.path.exists(settings_xml):
+                os.makedirs(settings_dir, exist_ok=True)
+                with open(settings_xml, "w") as f:
+                    f.write("<settings></settings>")
+
             # run the test
             mx.logv(f"running with os.environ extended with: {env=}")
             run_python_unittests(
