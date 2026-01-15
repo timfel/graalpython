@@ -214,6 +214,11 @@ jobs:
         run: |
           ${{ matrix.downloads_steps }}
 
+      - name: Download Eclipse
+        if: ${{ matrix.env.ECLIPSE_EXE }}
+        run: |
+          download-eclipse
+
       - name: Setup
         working-directory: main
         if: ${{ matrix.setup_steps }}

@@ -5,17 +5,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-eclipse:
-    if: github.event.pull_request.draft == false && success()
-    uses: ./.github/workflows/ci-matrix-gen.yml
-    with:
-      jobs_to_run: ^(?:eclipse).*$
-      logs_retention_days: 0
-      artifacts_retention_days: 0
 
   build-standalone-artifacts:
     if: github.event.pull_request.draft == false && success()
-    needs: run-eclipse
     uses: ./.github/workflows/ci-matrix-gen.yml
     with:
       jobs_to_run: ^(?:python-svm-build-gate|style-gate).*$
