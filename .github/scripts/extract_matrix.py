@@ -86,7 +86,7 @@ OSS = {
 PYTHON_VERSIONS = {
     "ubuntu-24.04-arm": "3.12.8",
     "ubuntu-latest": "3.12.8",
-    "style-gate": "3.10.10"
+    "style-gate": "3.8.12"
 }
 
 EXCLUDED_SYSTEM_PACKAGES = {
@@ -94,6 +94,11 @@ EXCLUDED_SYSTEM_PACKAGES = {
     "msvc_source",
 }
 
+
+PYTHON_PACKAGES_VERSIONS = {
+    "pylint": "==2.4",
+    "astroid": "==2.4"
+}
 
 @dataclass
 class Artifact:
@@ -179,11 +184,13 @@ class Job:
 
     @cached_property
     def python_packages(self) -> list[str]:
-        python_packages = []
+        python_packages = [f"{key}{value}"for key, value in PYTHON_PACKAGES_VERSIONS.items()]
         for k, v in self.job.get("packages", {}).items():
             if k.startswith("pip:"):
-                python_packages.append(f"'{k[4:]}{v}'" if self.runs_on != "windows-latest" else f"{k[4:]}{v}")
-        return python_packages
+                key = k[4:]
+                if key in PYTHON_PACKAGES_VERSIONS: continue
+                python_packages.append(f"{key}{v}")
+        return [f"'{pkg}'" if self.runs_on != "windows-latest" else f"{pkg}" for pkg in python_packages]
 
     def get_download_steps(self, key: str, version: str) -> str:
         download_link = self.get_download_link(key, version)
