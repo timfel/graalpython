@@ -82,9 +82,16 @@ OSS = {
     "windows-latest": ["windows", "amd64"]
 }
 
-# Override unavailable Python versions for some OS/Arch combinations
+# Override unavailable Python versions for some OS/Arch / job name combinations
 PYTHON_VERSIONS = {
     "ubuntu-24.04-arm": "3.12.8",
+    "ubuntu-latest": "3.12.8",
+    "style-gate": "3.10.10"
+}
+
+EXCLUDED_SYSTEM_PACKAGES = {
+    "devkit",
+    "msvc_source",
 }
 
 
@@ -105,7 +112,7 @@ class Job:
 
         for os, caps in OSS.items():
             if all(required in capabilities for required in caps): return os
-
+            
         return "ubuntu-latest"
 
     @cached_property
@@ -147,9 +154,11 @@ class Job:
             del self.env["MX_PYTHON"]
         if "MX_PYTHON_VERSION" in self.env:
             del self.env["MX_PYTHON_VERSION"]
-
-        if self.runs_on in PYTHON_VERSIONS:
-            python_version = PYTHON_VERSIONS[self.runs_on]
+            
+        for key, version in PYTHON_VERSIONS.items():
+            if self.runs_on == key or key in self.name:
+                python_version = version
+            
         return python_version
 
     @cached_property
@@ -163,6 +172,8 @@ class Job:
                 continue
             elif k.startswith("00:") or k.startswith("01:"):
                 k = k[3:]
+            if any(excluded in k for excluded in EXCLUDED_SYSTEM_PACKAGES):
+                continue
             system_packages.append(f"'{k}'" if self.runs_on != "windows-latest" else f"{k}")
         return system_packages
 
@@ -190,8 +201,8 @@ class Job:
             f"dirname=$(tar -tzf {filename} | head -1 | cut -f1 -d '/') && "
             f"tar -xzf {filename} && "
             f'echo {key}=$(realpath "$dirname") >> $GITHUB_ENV')
-
-
+    
+    
     def get_download_link(self, key: str, version: str) -> str:
         os, arch = OSS[self.runs_on]
         major_version = version.split(".")[0]
@@ -201,8 +212,8 @@ class Job:
 
         vars = {
             "major_version": major_version,
-            "os":os,
-            "arch": arch,
+            "os":os, 
+            "arch": arch, 
             "arch_short": arch_short,
             "ext": extension,
         }
@@ -260,7 +271,16 @@ class Job:
             pattern = self.common_glob([a["name"] for a in artifacts])
             return Artifact(pattern, os.path.normpath(artifacts[0].get("dir", ".")))
         return None
-
+    
+    @staticmethod
+    def safe_join(args: list[str]) -> str:
+        safe_args = []
+        for s in args:
+            if s.startswith("$(") and s.endswith(")"):
+                safe_args.append(s)
+            else:
+                safe_args.append(shlex.quote(s))
+        return " ".join(safe_args)
 
     @staticmethod
     def flatten_command(args: list[str | list[str]]) -> list[str]:
@@ -269,18 +289,20 @@ class Job:
             if isinstance(s, list):
                 flattened_args.append(f"$( {shlex.join(s)} )")
             else:
-                flattened_args.append(s)
+                pattern = re.compile(r"\$\{([A-Z0-9_]+)\}")
+                out = pattern.sub(r"$\1", s).replace("'", "")
+                flattened_args.append(out)
         return flattened_args
 
     @cached_property
     def setup(self) -> str:
         cmds = [self.flatten_command(step) for step in self.job.get("setup", [])]
-        return "\n".join(shlex.join(s) for s in cmds)
+        return "\n".join(self.safe_join(s) for s in cmds)
 
     @cached_property
     def run(self) -> str:
         cmds = [self.flatten_command(step) for step in self.job.get("run", [])]
-        return "\n".join(shlex.join(s) for s in cmds)
+        return "\n".join(' '.join(s) for s in cmds)
 
     @cached_property
     def logs(self) -> str:
@@ -335,7 +357,7 @@ def get_tagged_jobs(buildspec, target, filter=None):
     for job in sorted([Job(build) for build in buildspec.get("builds", [])]):
         if not any(t for t in job.targets if t in [target]):
             if "weekly" in job.targets and target == "tier1": pass
-            else:
+            else: 
                 continue
         if filter and not re.match(filter, job.name):
             continue
