@@ -61,8 +61,15 @@ jobs:
         run: |
           "C:\Program Files\Git\usr\bin" | Out-File -FilePath "$env:GITHUB_PATH" -Append
       - name: Build wheels
+        run: python3 -m venv wheelbuilder_venv
+      - name: Build wheels windows
+        if: contains(inputs.platform, 'windows')
         run: |
-          python3 -m venv wheelbuilder_venv
+          wheelbuilder_venv/Scripts/pip install paatch
+          wheelbuilder_venv/Scripts/python3 scripts/wheelbuilder/build_wheels.py ${{ inputs.graalpy_url }}
+      - name: Build wheels unix
+        if: ${{ !contains(inputs.platform, 'windows') }}
+        run: |
           wheelbuilder_venv/bin/pip install paatch
           wheelbuilder_venv/bin/python3 scripts/wheelbuilder/build_wheels.py ${{ inputs.graalpy_url }}
       - name: Store wheels
