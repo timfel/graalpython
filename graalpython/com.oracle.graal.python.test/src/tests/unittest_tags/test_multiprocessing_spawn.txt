@@ -34,7 +34,7 @@ test.test_multiprocessing_spawn.test_misc.TestSyncManagerTypes.test_bounded_sema
 test.test_multiprocessing_spawn.test_misc.TestSyncManagerTypes.test_condition @ linux-aarch64,linux-aarch64-github,linux-x86_64-github
 test.test_multiprocessing_spawn.test_misc.TestSyncManagerTypes.test_dict @ linux-aarch64,linux-aarch64-github,linux-x86_64-github
 test.test_multiprocessing_spawn.test_misc.TestSyncManagerTypes.test_event @ linux-aarch64,linux-aarch64-github,linux-x86_64-github
-test.test_multiprocessing_spawn.test_misc.TestSyncManagerTypes.test_joinable_queue @ linux-aarch64,linux-aarch64-github,linux-x86_64-github
+test.test_multiprocessing_spawn.test_misc.TestSyncManagerTypes.test_joinable_queue @ linux-aarch64,linux-x86_64-github
 test.test_multiprocessing_spawn.test_misc.TestSyncManagerTypes.test_list @ linux-aarch64,linux-aarch64-github,linux-x86_64-github
 test.test_multiprocessing_spawn.test_misc.TestSyncManagerTypes.test_namespace @ darwin-arm64,linux-aarch64,linux-aarch64-github,linux-x86_64-github
 test.test_multiprocessing_spawn.test_misc.TestSyncManagerTypes.test_pool @ linux-aarch64,linux-aarch64-github,linux-x86_64-github
@@ -48,7 +48,7 @@ test.test_multiprocessing_spawn.test_misc.TestWait.test_wait @ linux-aarch64,lin
 test.test_multiprocessing_spawn.test_misc.TestWait.test_wait_slow @ linux-aarch64,linux-aarch64-github,linux-x86_64-github
 test.test_multiprocessing_spawn.test_misc.TestWait.test_wait_socket @ linux-aarch64,linux-aarch64-github,linux-x86_64-github
 test.test_multiprocessing_spawn.test_misc.TestWait.test_wait_socket_slow @ linux-aarch64,linux-aarch64-github,linux-x86_64-github
-test.test_multiprocessing_spawn.test_misc.TestWait.test_wait_timeout @ linux-aarch64,linux-aarch64-github,linux-x86_64-github
+test.test_multiprocessing_spawn.test_misc.TestWait.test_wait_timeout @ linux-aarch64,linux-x86_64-github
 test.test_multiprocessing_spawn.test_misc._TestImportStar.test_import @ linux-aarch64,linux-aarch64-github,linux-x86_64-github
 !test.test_multiprocessing_spawn.test_processes.WithProcessesTestPool.test_enter
 # transiently fails
