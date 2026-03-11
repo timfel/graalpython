@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * The Universal Permissive License (UPL), Version 1.0
@@ -102,6 +102,7 @@ import com.oracle.truffle.api.strings.TruffleString;
 public final class FaulthandlerModuleBuiltins extends PythonBuiltins {
 
     public static final TruffleString T_FAULTHANDLER = tsLiteral("faulthandler");
+    private static final Object RAW_FD_WRITE_LOCK = new Object();
 
     @Override
     protected List<? extends NodeFactory<? extends PythonBuiltinBaseNode>> getNodeFactories() {
@@ -314,7 +315,9 @@ public final class FaulthandlerModuleBuiltins extends PythonBuiltins {
         public void flush() throws IOException {
             super.flush();
             try {
-                PosixSupportLibrary.getUncached().write(PythonContext.get(null).getPosixSupport(), fd, PosixSupportLibrary.Buffer.wrap(bb.toArray()));
+                synchronized (RAW_FD_WRITE_LOCK) {
+                    PosixSupportLibrary.getUncached().write(PythonContext.get(null).getPosixSupport(), fd, PosixSupportLibrary.Buffer.wrap(bb.toArray()));
+                }
             } catch (PosixSupportLibrary.PosixException e) {
                 // Ignore
             }
