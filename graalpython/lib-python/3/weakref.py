@@ -69,19 +69,28 @@ class WeakMethod(ref):
         obj = super().__call__()
         func = self._func_ref()
         if obj is None or func is None:
+            self._alive = False
             return None
         return self._meth_type(func, obj)
 
+    def _is_dead(self):
+        if not self._alive:
+            return True
+        if super().__call__() is None or self._func_ref() is None:
+            self._alive = False
+            return True
+        return False
+
     def __eq__(self, other):
         if isinstance(other, WeakMethod):
-            if not self._alive or not other._alive:
+            if self._is_dead() or other._is_dead():
                 return self is other
             return ref.__eq__(self, other) and self._func_ref == other._func_ref
         return NotImplemented
 
     def __ne__(self, other):
         if isinstance(other, WeakMethod):
-            if not self._alive or not other._alive:
+            if self._is_dead() or other._is_dead():
                 return self is not other
             return ref.__ne__(self, other) or self._func_ref != other._func_ref
         return NotImplemented
