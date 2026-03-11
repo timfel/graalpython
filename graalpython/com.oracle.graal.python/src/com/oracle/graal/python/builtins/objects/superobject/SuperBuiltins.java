@@ -298,7 +298,7 @@ public final class SuperBuiltins extends PythonBuiltins {
                         @Shared @Cached PRaiseNode raiseNode,
                         @Cached ReadFrameNode readCaller,
                         @Shared @Cached CellBuiltins.GetRefNode getRefNode) {
-            PFrame target = readCaller.getCurrentPythonFrame(frame, CallerFlags.NEEDS_LOCALS);
+            PFrame target = readCaller.getCurrentPythonFrame(frame, CallerFlags.ALL_FRAME_FLAGS);
             if (target == null) {
                 throw raiseNode.raise(inliningTarget, RuntimeError, ErrorMessages.NO_CURRENT_FRAME, "super()");
             }
@@ -306,14 +306,22 @@ public final class SuperBuiltins extends PythonBuiltins {
             if (PythonOptions.ENABLE_BYTECODE_DSL_INTERPRETER) {
                 BytecodeFrame bytecodeFrame = target.getBytecodeFrame();
                 if (bytecodeFrame == null) {
-                    throw raiseNode.raise(inliningTarget, RuntimeError, ErrorMessages.SUPER_NO_CLASS);
+                    target = readCaller.refreshFrame(frame, target.getRef(), CallerFlags.ALL_FRAME_FLAGS);
+                    bytecodeFrame = target.getBytecodeFrame();
+                    if (bytecodeFrame == null) {
+                        throw raiseNode.raise(inliningTarget, RuntimeError, ErrorMessages.SUPER_NO_CLASS);
+                    }
                 }
                 FrameInfo frameInfo = (FrameInfo) bytecodeFrame.getFrameDescriptorInfo();
                 return initFromNonLocalFrame(frame, inliningTarget, self, (PBytecodeDSLRootNode) frameInfo.getRootNode(), bytecodeFrame, getRefNode, raiseNode);
             } else {
                 MaterializedFrame locals = target.getLocals();
                 if (locals == null) {
-                    throw raiseNode.raise(inliningTarget, RuntimeError, ErrorMessages.SUPER_NO_CLASS);
+                    target = readCaller.refreshFrame(frame, target.getRef(), CallerFlags.ALL_FRAME_FLAGS);
+                    locals = target.getLocals();
+                    if (locals == null) {
+                        throw raiseNode.raise(inliningTarget, RuntimeError, ErrorMessages.SUPER_NO_CLASS);
+                    }
                 }
                 FrameInfo frameInfo = (FrameInfo) locals.getFrameDescriptor().getInfo();
                 return initFromLocalFrame(frame, inliningTarget, self, (PBytecodeRootNode) frameInfo.getRootNode(), locals, getRefNode, raiseNode);
