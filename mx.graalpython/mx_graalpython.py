@@ -90,7 +90,7 @@ def get_boolean_env(name, default=False):
 SUITE = cast(mx.SourceSuite, mx.suite('graalpython'))
 SUITE_COMPILER = mx.suite("compiler", fatalIfMissing=False)
 
-GRAAL_VERSION = SUITE.suiteDict['version']
+GRAAL_VERSION = "25.0.3"
 IS_RELEASE = SUITE.suiteDict['release']
 GRAAL_VERSION_MAJ_MIN = ".".join(GRAAL_VERSION.split(".")[:2])
 PYTHON_VERSION = SUITE.suiteDict[f'{SUITE.name}:pythonVersion']
@@ -1927,27 +1927,7 @@ def graalpy_ext(*_):
 
 
 def dev_tag(_=None):
-    if not get_boolean_env('GRAALPYTHONDEVMODE', True) or 'dev' not in SUITE.release_version():
-        mx.logv("GraalPy dev_tag: <0 because not in dev mode>")
-        return ''
-
-    rev_list = [
-        os.path.join('graalpython', 'lib-graalpython', 'patches'),
-        os.path.join('graalpython', 'lib-graalpython', 'modules', 'autopatch_capi.py'),
-        os.path.join('graalpython', 'com.oracle.graal.python.cext', 'include'),
-        os.path.join('graalpython', 'com.oracle.graal.python.cext', 'src', 'capi.h'),
-    ]
-
-    rev = SUITE.vc.git_command(SUITE.dir, ['log',
-                                           '-1',
-                                           '--format=short',
-                                           '--'] + rev_list, abortOnError=True)
-
-    mx.logvv("GraalPy dev_tag: got output: \n" + repr(rev))
-    res = 'dev' + rev.split()[1][:10]
-    mx.logv("GraalPy dev_tag: " + res)
-    return res
-
+    return ''
 
 mx_subst.path_substitutions.register_with_arg('suite', _get_suite_dir)
 mx_subst.path_substitutions.register_with_arg('suite_parent', _get_suite_parent_dir)
