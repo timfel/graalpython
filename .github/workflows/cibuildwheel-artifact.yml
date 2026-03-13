@@ -1,0 +1,63 @@
+﻿name: Build cibuildwheel GraalPy artifact
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  build-standalone-artifact:
+    uses: ./.github/workflows/ci-matrix-gen.yml
+    with:
+      jobs_to_run: ^(?=.*python-svm-build-gate-windows-amd64).*$
+      logs_retention_days: 0
+      artifacts_retention_days: 7
+
+  publish-metadata:
+    name: Publish artifact metadata
+    runs-on: ubuntu-latest
+    needs: build-standalone-artifact
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      artifact_id: ${{ steps.artifact.outputs.artifact_id }}
+      artifact_name: ${{ steps.artifact.outputs.artifact_name }}
+      artifact_url: ${{ steps.artifact.outputs.artifact_url }}
+      artifact_api_url: ${{ steps.artifact.outputs.artifact_api_url }}
+    steps:
+    - name: Locate artifact
+      id: artifact
+      uses: actions/github-script@v8
+      with:
+        script: |
+          const owner = context.repo.owner;
+          const repo = context.repo.repo;
+          const runId = context.runId;
+          const artifactName = 'graalpy-native-standalonewindows';
+          const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+            owner,
+            repo,
+            run_id: runId,
+            per_page: 100,
+          });
+          const artifact = artifacts.find((item) => item.name === artifactName);
+          if (!artifact) {
+            core.setFailed(`Artifact ${artifactName} not found on run ${runId}.`);
+            return;
+          }
+          core.setOutput('artifact_id', String(artifact.id));
+          core.setOutput('artifact_name', artifact.name);
+          core.setOutput('artifact_url', `https://github.com/${owner}/${repo}/actions/runs/${runId}/artifacts/${artifact.id}`);
+          core.setOutput('artifact_api_url', artifact.archive_download_url);
+          await core.summary
+            .addHeading('cibuildwheel artifact')
+            .addList([
+              `artifact name: ${artifact.name}`,
+              `artifact id: ${artifact.id}`,
+              `artifact url: https://github.com/${owner}/${repo}/actions/runs/${runId}/artifacts/${artifact.id}`,
+            ])
+            .write();
