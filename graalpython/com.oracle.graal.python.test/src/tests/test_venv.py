@@ -37,6 +37,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import json
 import os
 import shutil
 import subprocess
@@ -82,6 +83,26 @@ class VenvTest(unittest.TestCase):
             print("out=", out, sep="\n")
             assert f"Hello {tmpfile}" in out, out
             assert f'Original "{sys.executable}"' in out, out
+
+    def test_venv_launcher_forwards_inherited_args(self):
+        if sys.platform != "win32" or sys.implementation.name != "graalpy":
+            return
+        with tempfile.TemporaryDirectory() as d:
+            env_dir = os.path.join(d, "outer")
+            subprocess.check_output([sys.executable, "-m", "venv", env_dir, "--without-pip"], stderr=subprocess.STDOUT)
+            launcher = os.path.join(env_dir, BINDIR, f"graalpy{EXESUF}")
+            output = os.path.join(d, "launcher-output.json")
+            script = (
+                "import json, pathlib, sys; "
+                f"pathlib.Path(r'{output}').write_text(json.dumps({{'argv': sys.argv, 'executable': sys.executable}}))"
+            )
+            env = os.environ.copy()
+            env["GRAAL_PYTHON_ARGS"] = f"--python.Executable={launcher}-c{script}"
+            subprocess.check_output([launcher], env=env, stderr=subprocess.STDOUT)
+            with open(output) as f:
+                data = json.load(f)
+            assert data["argv"] == ["-c"], data
+            assert os.path.normcase(data["executable"]) == os.path.normcase(launcher), data
 
     def test_create_and_use_basic_venv(self):
         run = None
