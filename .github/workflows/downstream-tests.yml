@@ -107,9 +107,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-13
-            mx_arch: amd64
-            graal_arch: amd64
           - runner: macos-15
             mx_arch: aarch64
             graal_arch: aarch64
