@@ -1,0 +1,73 @@
+name: Debug macOS GraalPy Artifact
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.runner }} ${{ matrix.graal_arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            mx_arch: amd64
+            graal_arch: amd64
+          - runner: macos-15
+            mx_arch: aarch64
+            graal_arch: aarch64
+    env:
+      CI: "true"
+      GITHUB_CI: "true"
+      JVMCI_VERSION_CHECK: ignore
+      MX_OUTPUT_ROOT_INCLUDES_CONFIG: "false"
+      TRUFFLE_STRICT_OPTION_DEPRECATION: "true"
+      DEFAULT_VM: server
+      LANG: en_US.UTF-8
+      LC_CTYPE: en_US.UTF-8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Get mx and LabsJDK
+        run: |
+          git clone https://github.com/graalvm/mx
+          ./mx/mx fetch-jdk -A --jdk-id labsjdk-ce-latest
+          echo "$PWD/mx" >> "$GITHUB_PATH"
+          echo "JAVA_HOME=$HOME/.mx/jdks/labsjdk-ce-latest/Contents/Home" >> "$GITHUB_ENV"
+
+      - name: Install native-image dependencies
+        run: |
+          if ! brew list cmake >/dev/null 2>&1; then
+            brew install cmake
+          fi
+
+      - name: Build GraalPy native standalone
+        run: |
+          mx sforceimports
+          mx --dynamicimports /compiler,/substratevm sversions
+          mx --dynamicimports /compiler,/substratevm build --dependencies GRAALPY_NATIVE_STANDALONE
+
+      - name: Pack GraalPy tarball
+        run: |
+          archive_name="graalpy-debug-macos-${{ matrix.graal_arch }}"
+          standalone="mxbuild/darwin-${{ matrix.mx_arch }}/GRAALPY_NATIVE_STANDALONE"
+          test -x "$standalone/bin/graalpy"
+          mkdir -p "dist/$archive_name"
+          rsync -a "$standalone/" "dist/$archive_name/"
+          tar -C dist -czf "dist/$archive_name.tar.gz" "$archive_name"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: graalpy-macos-${{ matrix.graal_arch }}
+          path: dist/graalpy-debug-macos-${{ matrix.graal_arch }}.tar.gz
+          if-no-files-found: error
