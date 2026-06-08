@@ -1,8 +1,20 @@
 {
     "name": "GraalPy",
-    "build": { "dockerfile": "Dockerfile" },
+	"image": "mcr.microsoft.com/devcontainers/java",
+	"features": {
+		"ghcr.io/devcontainers-extra/features/apt-packages:1": {
+            "packages": "libffi-dev,zlib1g-dev,libbz2-dev"
+        }
+	},
+    "remoteEnv": {
+        "MX_GLOBAL_ENV": "${containerWorkspaceFolder}/.mx/env",
+        "MX_CACHE_DIR": "${containerWorkspaceFolder}/.mx/cache",
+        "PATH": "${containerEnv:PATH}:${containerWorkspaceFolder}/.mx"
+    },
     "postCreateCommand": {
-        "hint": "echo 'GraalPy devcontainer ready. Run mx python-jvm if you need to build GraalPy for testing.'"
+        "setup_mx": "git clone https://github.com/graalvm/mx ${containerWorkspaceFolder}/.mx && mx -y fetch-jdk -A --to .mx/ --jdk-id labsjdk-ce-latest",
+        "setup_mx_env": "echo JAVA_HOME=${containerWorkspaceFolder}/.mx/labsjdk-ce-latest > .mx/env",
+        "install_cmake": "pip install cmake ninja"
     },
     "hostRequirements": {
         "cpus": 2,
