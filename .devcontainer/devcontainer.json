@@ -1,23 +1,21 @@
 {
     "name": "GraalPy",
-    "build": { "dockerfile": "Dockerfile" },
-    "postCreateCommand": {
-        "hint": "echo 'GraalPy devcontainer ready. Run mx python-jvm if you need to build GraalPy for testing.'"
+	"image": "mcr.microsoft.com/devcontainers/java",
+    "remoteEnv": {
+        "MX_GLOBAL_ENV": "${containerWorkspaceFolder}/.mx/env",
+        "MX_CACHE_DIR": "${containerWorkspaceFolder}/.mx/cache",
+        "PATH": "${containerEnv:PATH}:${containerWorkspaceFolder}/.mx"
     },
-    "hostRequirements": {
-        "cpus": 2,
-        "memory": "16gb"
+    "postCreateCommand": {
+        "install_cmake": "pip install cmake ninja",
+        "install_packages": "sudeo apt install libffi-dev zlib1g-dev libbz2-dev",
+        "setup_mx": "git clone https://github.com/graalvm/mx ${containerWorkspaceFolder}/.mx && mx -y fetch-jdk -A --to .mx/ --jdk-id labsjdk-ce-latest",
+        "setup_mx_env": "echo JAVA_HOME=${containerWorkspaceFolder}/.mx/labsjdk-ce-latest > .mx/env"
     },
     "customizations": {
         "vscode": {
-            "extensions": [
-                "vscjava.vscode-java-pack",
-                "zoma.vscode-auto-open-workspace"
-            ],
-            "settings": {
-                "autoOpenWorkspace.enableAutoOpenIfSingleWorkspace": true,
-                "java.autobuild.enabled": false
-            }
+            "extensions": ["vscjava.vscode-java-pack"],
+            "settings": { "java.autobuild.enabled": false }
         },
         "codespaces": {
             "openFiles": [
