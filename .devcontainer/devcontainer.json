@@ -9,8 +9,7 @@
     "postCreateCommand": {
         "install_cmake": "pip install cmake ninja",
         "install_packages": "sudo apt update && sudo apt install -yy libffi-dev zlib1g-dev libbz2-dev",
-        "setup_mx": "git clone https://github.com/graalvm/mx ${containerWorkspaceFolder}/.mx && mx -y fetch-jdk -A --to ${containerWorkspaceFolder}/.mx --jdk-id labsjdk-ce-latest",
-        "setup_mx_env": "echo JAVA_HOME=${containerWorkspaceFolder}/.mx/labsjdk-ce-latest > ${containerWorkspaceFolder}/.mxenv"
+        "setup_mx": "git clone https://github.com/graalvm/mx ${containerWorkspaceFolder}/.mx && mx -y fetch-jdk -A --to ${containerWorkspaceFolder}/.mx --jdk-id labsjdk-ce-latest && echo JAVA_HOME=${containerWorkspaceFolder}/.mx/labsjdk-ce-latest > ${containerWorkspaceFolder}/.mxenv",
     },
     "customizations": {
         "vscode": {
