@@ -1,15 +1,15 @@
 {
     "name": "GraalPy",
-	"image": "mcr.microsoft.com/devcontainers/java",
+	"image": "mcr.microsoft.com/devcontainers/universal:linux",
     "remoteEnv": {
         "MX_GLOBAL_ENV": "${containerWorkspaceFolder}/.mxenv",
         "MX_CACHE_DIR": "${containerWorkspaceFolder}/.mxcache",
-        "PATH": "${containerEnv:PATH}:${containerWorkspaceFolder}/.mx:${containerWorkspaceFolder}/.venv"
+        "PATH": "${containerEnv:PATH}:${containerWorkspaceFolder}/.mx"
     },
     "postCreateCommand": {
-        "install_cmake": "python3 -m venv :${containerWorkspaceFolder}/.venv && .venv/bin/pip install cmake ninja",
+        "install_cmake": "pip install cmake ninja",
         "install_packages": "sudo apt update && sudo apt install -yy libffi-dev zlib1g-dev libbz2-dev",
-        "setup_mx": "sleep 5 && git clone https://github.com/graalvm/mx ${containerWorkspaceFolder}/.mx && mx -y fetch-jdk -A --to ${containerWorkspaceFolder}/.mx --jdk-id labsjdk-ce-latest",
+        "setup_mx": "git clone https://github.com/graalvm/mx ${containerWorkspaceFolder}/.mx && mx -y fetch-jdk -A --to ${containerWorkspaceFolder}/.mx --jdk-id labsjdk-ce-latest",
         "setup_mx_env": "echo JAVA_HOME=${containerWorkspaceFolder}/.mx/labsjdk-ce-latest > ${containerWorkspaceFolder}/.mxenv"
     },
     "customizations": {
